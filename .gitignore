@@ -138,3 +138,11 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Project specific
+.workbuddy/
+start_bat_content.txt
+start_utf8.bat
+启动项目.md
+*.md.bak
+*.tmp
