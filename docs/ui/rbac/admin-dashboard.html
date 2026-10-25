@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>辰光 Agent 平台 - RBAC 管理员仪表盘</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --bg-subtle: #111827;
+      --fg: #f1f5f9;
+      --muted: #64748b;
+      --accent: #efa47f;
+      --accent-hover: #f4b5a1;
+      --card: #1a2232;
+      --border: #2a3a52;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --error: #f87171;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Playfair Display', serif;
+      color: var(--fg);
+    }
+
+    /* 背景纹理 */
+    .bg-pattern {
+      background-image:
+        linear-gradient(var(--bg) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bg) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.03;
+    }
+
+    /* 导航栏 */
+    .navbar {
+      background: linear-gradient(135deg, #0d1320 0%, #0a0e17 100%);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* 侧边栏 */
+    .sidebar {
+      background: #0f1520;
+      min-height: 100vh;
+      border-right: 1px solid var(--border);
+    }
+
+    .sidebar-link {
+      color: var(--muted);
+      padding: 12px 16px;
+      border-radius: 0 4px 4px 0;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-link:hover {
+      background: rgba(239, 164, 127, 0.1);
+      color: var(--accent);
+    }
+
+    .sidebar-link.active {
+      background: rgba(239, 164, 127, 0.15);
+      color: var(--accent);
+    }
+
+    /* 统计卡片 */
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      border-color: rgba(239, 164, 127, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .stat-card .stat-number {
+      font-size: 32px;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent), #d97757);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* 表格 */
+    .data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    .data-table th {
+      background: #101620;
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 500;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .data-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s ease;
+    }
+
+    .data-table tbody tr {
+      background: var(--card);
+    }
+
+    .data-table tbody tr:hover {
+      background: #151d2e;
+    }
+
+    .data-table tbody tr:hover td {
+      border-color: rgba(239, 164, 127, 0.2);
+    }
+
+    /* 按钮 */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      outline: none;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0e17;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-danger {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .btn-danger:hover {
+      background: #fca5a5;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      padding: 6px 12px;
+    }
+
+    .btn-ghost:hover {
+      color: var(--accent);
+    }
+
+    /* 权限标签 */
+    .perm-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      background: rgba(239, 164, 127, 0.15);
+      border: 1px solid rgba(239, 164, 127, 0.3);
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent);
+      margin: 2px;
+    }
+
+    /* 模态框 */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      width: 90%;
+      max-width: 500px;
+      transform: scale(0.9) translateY(20px);
+      transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.active .modal {
+      transform: scale(1) translateY(0);
+    }
+
+    /* 输入框 */
+    .input-field {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--fg);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .input-field:focus {
+      border-color: var(--accent);
+    }
+
+    .input-field::placeholder {
+      color: var(--muted);
+    }
+
+    /* 徽标 */
+    .perm-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+      background: rgba(239, 164, 127, 0.1);
+      border: 1px solid rgba(239, 164, 127, 0.2);
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      margin: 0 2px;
+    }
+
+    /* 头部标题 */
+    .page-title {
+      font-size: 28px;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    /* 面包屑 */
+    .breadcrumb {
+      --breadcrumb-divider: '>';
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .breadcrumb-item a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    .breadcrumb-item a:hover {
+      color: var(--accent);
+    }
+
+    /* 页脚 */
+    .footer {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* 减少动画 */
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0s !important;
+        transition-duration: 0s !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-pattern">
+
+  <!-- 头部导航 -->
+  <nav class="navbar">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-3">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#efa47f" stroke-width="1.5">
+          <rect x="6" y="6" width="20" height="20" rx="4"/>
+          <path d="M18 12l-6 6l6 6"/>
+        </svg>
+        <span class="text-xl font-medium" style="font-family: 'Playfair Display', serif;">辰光 Agent</span>
+      </a>
+      <div class="flex items-center gap-4">
+        <span class="text-sm text-[var(--muted)]">欢迎回来，super_admin</span>
+        <div class="relative">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5" class="icon-user">
+            <path d="M20 21v2a2 2 0 01-2 2H10a2 2 0 01-2-2v-2M6 8a2 2 0 012-2h4a2 2 0 012 2v2a2 2 0 01-2 2H8a2 2 0 01-2-2V8z"/>
+            <circle cx="12" cy="12" r="10"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 主内容区 -->
+  <main class="max-w-7xl mx-auto px-6 py-6">
+    <!-- 面包屑 -->
+    <nav aria-label="breadcrumb" class="mb-6">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="#">首页</a></li>
+        <li class="breadcrumb-item"><a href="#">权限管理</a></li>
+        <li class="breadcrumb-item active" aria-current="page">RBAC 管理员仪表盘</li>
+      </ol>
+    </nav>
+
+    <!-- 欢迎卡片 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <!-- 统计卡片 -->
+      <div class="stat-card">
+        <div class="stat-number" id="total-users">0</div>
+        <div class="text-[var(--muted)] text-sm mb-2">总用户数</div>
+        <div class="text-[var(--muted)] text-xs">+ 3 今日注册</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-number" id="total-roles">0</div>
+        <div class="text-[var(--muted)] text-sm mb-2">总角色数</div>
+        <div class="text-[var(--muted)] text-xs">5 系统角色</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-number" id="total-perms">0</div>
+        <div class="text-[var(--muted)] text-sm mb-2">总权限码</div>
+        <div class="text-[var(--muted)] text-xs">25+ 细粒度权限</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-number" id="api-endpoints">0</div>
+        <div class="text-[var(--muted)] text-sm mb-2">API 端点</div>
+        <div class="text-[var(--muted)] text-xs">全部分布式控制</div>
+      </div>
+    </div>
+
+    <!-- 操作快捷方式 -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-6 hover:border-[rgba(239,164,127,0.3)] transition-all">
+        <div class="flex items-center gap-3 mb-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#efa47f" stroke-width="1.5">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span class="text-[var(--accent)] font-medium">角色管理</span>
+        </div>
+        <p class="text-[var(--muted)] text-sm">分配角色、定义权限码、控制数据访问</p>
+        <button class="btn btn-primary w-full mt-3 mt-auto" onclick="window.location.href='/rbac/roles'">进入角色管理</button>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-6 hover:border-[rgba(239,164,127,0.3)] transition-all">
+        <div class="flex items-center gap-3 mb-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#efa47f" stroke-width="1.5">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v4M12 7a2 2 0 012 2v4m0 4a2 2 0 012 2v4m0-6a2 2 0 01-2 2v4"/>
+          </svg>
+          <span class="text-[var(--accent)] font-member">用户管理</span>
+        </div>
+        <p class="text-[var(--muted)] text-sm">查看用户、分配角色、数据级授权</p>
+        <button class="btn btn-primary w-full mt-3 mt-auto" onclick="window.location.href='/rbac/users'">进入用户管理</button>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-6 hover:border-[rgba(239,164,127,0.3)] transition-all">
+        <div class="flex items-center gap-3 mb-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#efa47f" stroke-width="1.5">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4"/>
+            <line x1="15" y1="11" x2="21" y2="11"/>
+          </svg>
+          <span class="text-[var(--accent)] font-member">权限管理</span>
+        </div>
+        <p class="text-[var(--muted)] text-sm">分配/收回权限码、默认权限初始化</p>
+        <button class="btn btn-primary w-full mt-3 mt-auto" onclick="window.location.href='/rbac/permissions'">进入权限管理</button>
+      </div>
+    </div>
+
+    <!-- 权限码概览 -->
+    <section class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-6 mb-8">
+      <h2 class="page-title flex items-center gap-2 mb-4">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#efa47f" stroke-width="1.5">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0110 0v4"/>
+          <line x1="15" y1="11" x2="21" y2="11"/>
+        </svg>
+        权限码体系概览
+      </h2>
+      <p class="text-[var(--muted)] text-sm mb-6">采用 <code>resource:action</code> 格式，便于维护和扩展。25+ 标准权限码覆盖所有业务模块。</p>
+
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <!-- 权限标签示例 -->
+        <span class="perm-tag">agent:read</span>
+        <span class="perm-tag">agent:create</span>
+        <span class="perm-tag">agent:update</span>
+        <span class="perm-tag">agent:delete</span>
+        <span class="perm-tag">model:read</span>
+        <span class="perm-tag">model:create</span>
+        <span class="perm-tag">prompt:read</span>
+        <span class="perm-tag">knowledge:write</span>
+        <span class="perm-tag">analytics:read</span>
+        <span class="perm-tag">system:user/manage</span>
+        <span class="perm-tag">system:role/manage</span>
+        <span class="perm-tag">system:permission/manage</span>
+      </div>
+
+      <div class="mt-6 pt-6 border-t border-[var(--border)]">
+        <h3 class="text-[var(--muted)] text-sm mb-3">默认角色权限映射</h3>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <span class="text-[var(--accent)] font-medium">super_admin</span>
+            <span class="text-[var(--muted)] text-xs ml-1">所有权限</span>
+          </div>
+          <div>
+            <span class="text-[var(--accent)] font-medium">admin</span>
+            <span class="text-[var(--muted)] text-xs ml-1">除用户/角色/权限管理外的所有</span>
+          </div>
+          <div>
+            <span class="text-[var(--accent)] font-medium">operator</span>
+            <span class="text-[var(--muted)] text-xs ml-1">Agent/模型/Prompt/知识库/工具：只读+部分写入</span>
+          </div>
+          <div>
+            <span class="text-[var(--accent)] font-medium">viewer</span>
+            <span class="text-[var(--muted)] text-xs ml-1">Agent/Prompt/知识库/分析：只读</span>
+          </div>
+          <div>
+            <span class="text-[var(--accent)] font-medium">auditor</span>
+            <span class="text-[var(--muted)] text-xs ml-1">对话查看、审计日志查看</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 最近操作日志 -->
+    <section class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-6 mb-8">
+      <h2 class="page-title flex items-center gap-2 mb-4">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#efa47f" stroke-width="1.5">
+          <path d="M3 3l20 8l-7 5-5-3-3 5-5-3-7 5V3"/>
+        </svg>
+        最近操作日志
+      </h2>
+      <div class="h-96 overflow-y-auto">
+        <div class="data-table">
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>操作</th>
+              <th>用户</th>
+              <th>详情</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-[var(--muted)] text-sm">14分钟前</td>
+              <td>
+                <span class="perm-badge">agent:create</span>
+              </td>
+              <td class="font-medium">super_admin</td>
+              <td>创建了新 Agent: research-assistant-v2</td>
+            </tr>
+            <tr>
+              <td class="text-[var(--muted)] text-sm">31分钟前</td>
+              <td>
+                <span class="perm-tag">knowledge:write</span>
+              </td>
+              <td>operator_liu</td>
+              <td>上传了知识库文档: q2-market-report.pdf</td>
+            </tr>
+            <tr>
+              <td class="text-[var(--muted)] text-sm">1小时前</td>
+              <td>
+                <span class="perm-tag">model:read</span>
+              </td>
+              <td class="font-medium">user_zhang</td>
+              <td>查看了模型列表</td>
+            </tr>
+            <tr>
+              <td class="text-[var(--muted)] text-sm">2小时前</td>
+              <td>
+                <span class="perm-tag">system:user/manage</span>
+              </td>
+              <td>super_admin</td>
+              <td>重置了用户密码: user_cheng</td>
+            </tr>
+          </tbody>
+        </div>
+      </div>
+    </section>
+
+    <!-- 搜索与筛选 -->
+    <section class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-6 mb-8">
+      <h2 class="page-title flex items-center gap-2 mb-4">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#efa47f" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        快速搜索与筛选
+      </h2>
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center">
+        <div>
+          <input type="text" class="input-field" placeholder="搜索用户、角色、权限..." id="search-input">
+        </div>
+        <select class="input-field">
+          <option>全部</option>
+          <option>启用</option>
+          <option>禁用</option>
+        </select>
+        <select class="input-field">
+          <option>全部角色</option>
+          <option>super_admin</option>
+          <option>admin</option>
+          <option>operator</option>
+          <option>viewer</option>
+          <option>auditor</option>
+        </select>
+        <button class="btn btn-primary">应用筛选</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- 模态框 -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <button class="btn btn-ghost absolute right-4 top-4 close-modal" aria-label="关闭">×</button>
+      <h3 class="text-lg font-medium mb-6" id="modal-title">标题</h3>
+      <form id="modal-form">
+        <div class="grid grid-cols-1 gap-4 mb-6">
+          <div>
+            <label class="text-[var(--muted)] text-xs uppercase tracking-wider mb-2">名称</label>
+            <input type="text" class="input-field" id="modal-name" placeholder="输入名称">
+          </div>
+          <div>
+            <label class="text-[var(--muted)] text-xs uppercase tracking-wider mb-2">描述</label>
+            <textarea class="input-field" rows="3" id="modal-desc" placeholder="输入描述"></textarea>
+          </div>
+        </div>
+        <div class="pt-6 border-t border-[var(--border)]">
+          <button type="submit" class="btn btn-primary w-full">确定</button>
+          <button type="button" class="btn btn-ghost w-full mt-2 cancel-modal">取消</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // 数据初始化
+    const permCodes = [
+      'agent:read', 'agent:create', 'agent:update', 'agent:delete', 'agent:manage:lifecycle',
+      'model:read', 'model:create', 'model:update', 'model:delete',
+      'provider:manage',
+      'prompt:read/create/update/delete',
+      'knowledge:read', 'knowledge:write', 'knowledge:manage',
+      'tool:read/create/update/delete/test',
+      'conversation:read', 'conversation:annotate',
+      'analytics:read',
+      'system:user/manage', 'system:role/manage', 'system:permission/manage'
+    ];
+
+    const rolePerms = {
+      super_admin: permCodes,
+      admin: permCodes.filter(p => !['system:user/manage', 'system:role/manage', 'system:permission/manage'].includes(p)),
+      operator: ['agent:read', 'agent:create', 'model:read', 'model:create', 'prompt:read', 'prompt:create',
+        'knowledge:write', 'tool:read', 'conversation:read', 'analytics:read'],
+      viewer: ['agent:read', 'model:read', 'prompt:read', 'knowledge:read', 'analytics:read'],
+      auditor: ['conversation:read', 'conversation:annotate', 'analytics:read']
+    };
+
+    const users = [
+      { id: 1, username: 'super_admin', role: 'super_admin', status: 'online' },
+      { id: 2, username: 'zhang_wei', role: 'admin', status: 'online' },
+      { id: 3, username: 'liu_yun', role: 'operator', status: 'away' },
+      { id: 4, username: 'wang_ming', role: 'viewer', status: 'online' },
+      { id: 5, username: 'zhou_audit', role: 'auditor', status: 'online' }
+    ];
+
+    const recentLogs = [
+      { time: '14分钟前', perm: 'agent:create', user: 'super_admin', detail: '创建了新 Agent: research-assistant-v2' },
+      { time: '31分钟前', perm: 'knowledge:write', user: 'operator_liu', detail: '上传了知识库文档: q2-market-report.pdf' },
+      { time: '1小时前', perm: 'model:read', user: 'user_zhang', detail: '查看了模型列表' },
+      { time: '2小时前', perm: 'system:user/manage', user: 'super_admin', detail: '重置了用户密码: user_cheng' }
+    ];
+
+    // 渲染统计卡片
+    document.getElementById('total-users').textContent = users.length;
+    document.getElementById('total-roles').textContent = Object.keys(rolePerms).length;
+    document.getElementById('total-perms').textContent = permCodes.length;
+    document.getElementById('api-endpoints').textContent = permCodes.length;
+
+    // 渲染权限标签
+    const permContainer = document.querySelector('.perm-tag-grid');
+    if (permContainer) {
+      permCodes.forEach(code => {
+        const tag = document.createElement('span');
+        tag.className = 'perm-tag';
+        tag.textContent = code;
+        permContainer.appendChild(tag);
+      });
+    }
+
+    // 渲染最近日志
+    const logTable = document.querySelector('#recent-logs tbody');
+    if (logTable) {
+      recentLogs.forEach(log => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="text-[var(--muted)] text-sm">${log.time}</td>
+          <td><span class="perm-badge">${log.perm}</span></td>
+          <td class="font-medium">${log.user}</td>
+          <td>${log.detail}</td>
+        `;
+        logTable.appendChild(tr);
+      });
+    }
+
+    // 模态框功能
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modal = modalOverlay.querySelector('.modal');
+    const closeModal = () => {
+      modalOverlay.classList.remove('active');
+    };
+
+    document.querySelectorAll('.open-modal').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+      });
+    });
+
+    // 关闭按钮
+    modalOverlay.querySelector('.close-modal').addEventListener('click', closeModal);
+    modalOverlay.querySelector('.cancel-modal').addEventListener('click', closeModal);
+
+    // 点击模外关闭
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeModal();
+    });
+
+    // ESC 键关闭
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modalOverlay.classList.contains('active')) closeModal();
+    });
+
+    // 搜索功能
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#recent-logs tbody tr');
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = text.includes(term) ? '' : 'none';
+        });
+      });
+    }
+
+    //  reduced motion
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.documentElement.classList.add('reduced-motion');
+    }
+  </script>
+</body>
+</html>
